@@ -7,6 +7,13 @@
 #include <WebSocketsClient.h>
 #include <SocketIOclient.h>
 
+#include <DHT.h>
+
+#define DHTPIN 4
+#define DHTTYPE DHT11
+
+DHT dht(DHTPIN, DHTTYPE);
+
 SocketIOclient socketIO;
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length);
@@ -16,7 +23,7 @@ void setup()
   Serial.begin(9600);
 
   WiFi.begin("salazar", "232005195");
-  Serial.print("\n\n\n[*] Connecting to WiFi");
+  Serial.print("\n\n[*] Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED)
   {
     Serial.print(".");
@@ -31,6 +38,8 @@ void setup()
   // @note socket.io connection
   socketIO.begin("192.168.0.25", 3000, "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
+
+  dht.begin();
 }
 
 unsigned long messageTimestamp = 0;
@@ -39,22 +48,30 @@ void loop()
   socketIO.loop();
 
   uint64_t now = millis();
-  if (now - messageTimestamp > 2000)
+  if (now - messageTimestamp > 15000)
   {
     messageTimestamp = now;
+
+    float humidity = dht.readHumidity();
+    float temperatureCelsius = dht.readTemperature();
+    float temperatureFahrenheit = dht.readTemperature(true);
+    float heatIndexCelsius = dht.computeHeatIndex(temperatureCelsius, humidity);
+    float heatIndexFahrenheit = dht.computeHeatIndex(temperatureFahrenheit, humidity, true);
+
+
     JsonDocument doc;
     JsonArray events = doc.to<JsonArray>();
-
     events.add("sensor");
-
     JsonObject data = events.add<JsonObject>();
-    data["humidity"] = 50;
-    data["temperature"] = 25;
+    data["humidity"] = humidity;
+    data["temperatureCelsius"] = temperatureCelsius;
+    data["temperatureFahrenheit"] = temperatureFahrenheit;
+    data["heatIndexCelsius"] = heatIndexCelsius;
+    data["heatIndexFahrenheit"] = heatIndexFahrenheit;
 
     String output;
     serializeJson(doc, output);
     socketIO.sendEVENT(output);
-    Serial.println(output);
   }
 }
 
