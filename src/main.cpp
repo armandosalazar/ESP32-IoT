@@ -15,6 +15,8 @@
 DHT dht(DHTPIN, DHTTYPE);
 
 SocketIOclient socketIO;
+const char *ssid = "Totalplay-2.4G-6090";
+const char *password = "yF7Nh9bChkBXYpPQ";
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length);
 
@@ -22,7 +24,7 @@ void setup()
 {
   Serial.begin(9600);
 
-  WiFi.begin("salazar", "232005195");
+  WiFi.begin(ssid, password);
   Serial.print("\n\n[*] Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -36,7 +38,7 @@ void setup()
   Serial.printf("[*] IP address: %s\n", ip.c_str());
 
   // @note socket.io connection
-  socketIO.begin("192.168.0.25", 3000, "/socket.io/?EIO=4");
+  socketIO.begin("192.168.100.29", 3000, "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
 
   dht.begin();
@@ -48,7 +50,7 @@ void loop()
   socketIO.loop();
 
   uint64_t now = millis();
-  if (now - messageTimestamp > 15000)
+  if (now - messageTimestamp > 30000)
   {
     messageTimestamp = now;
 
@@ -57,7 +59,6 @@ void loop()
     float temperatureFahrenheit = dht.readTemperature(true);
     float heatIndexCelsius = dht.computeHeatIndex(temperatureCelsius, humidity);
     float heatIndexFahrenheit = dht.computeHeatIndex(temperatureFahrenheit, humidity, true);
-
 
     JsonDocument doc;
     JsonArray events = doc.to<JsonArray>();
@@ -89,8 +90,17 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
   }
   break;
   case sIOtype_EVENT:
-    Serial.printf("[IOc] get event: %s\n", payload);
-    break;
+  {
+    JsonDocument doc;
+    deserializeJson(doc, payload);
+    String event = doc[0];
+    if (event != "sensor")
+    {
+      Serial.printf("[IOc] event name: %s\n", event.c_str());
+      Serial.printf("[IOc] get event: %s\n", payload);
+    }
+  }
+  break;
   case sIOtype_ACK:
     Serial.printf("[IOc] get ack: %u\n", length);
     socketIO.send(sIOtype_ACK, "message");
