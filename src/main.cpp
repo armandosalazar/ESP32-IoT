@@ -15,8 +15,8 @@
 DHT dht(DHTPIN, DHTTYPE);
 
 SocketIOclient socketIO;
-const char *ssid = "Totalplay-2.4G-6090";
-const char *password = "yF7Nh9bChkBXYpPQ";
+const char *ssid = "CFE2";
+const char *password = "12345678";
 
 void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length);
 
@@ -38,7 +38,7 @@ void setup()
   Serial.printf("[*] IP address: %s\n", ip.c_str());
 
   // @note socket.io connection
-  socketIO.begin("192.168.100.29", 3000, "/socket.io/?EIO=4");
+  socketIO.begin("192.168.137.166", 3000, "/socket.io/?EIO=4");
   socketIO.onEvent(socketIOEvent);
 
   dht.begin();
@@ -50,7 +50,7 @@ void loop()
   socketIO.loop();
 
   uint64_t now = millis();
-  if (now - messageTimestamp > 30000)
+  if (now - messageTimestamp > 15000)
   {
     messageTimestamp = now;
 
